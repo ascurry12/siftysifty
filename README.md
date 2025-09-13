@@ -4,8 +4,6 @@ SiftySifty is a desktop application for testing/troubleshooting mods in The Sims
 
 ## Installation - MacOS
  
-Download the dist folder and navigate to the directory named main. Double click the executable found in the directory.
-
 ## Usage
 
 * Choose which game you want to run a test for. Options currently available for The Sims 3 and 4.
