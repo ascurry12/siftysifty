@@ -4,11 +4,10 @@ from tkinter import StringVar
 from tkinter import messagebox
 import webbrowser
 import pandas as pd
-import platform
 import pathlib
 from send2trash import send2trash
 import shutil
-import os
+from pathlib import Path
 
 # *** ///////// GUI ///////// ***
 
@@ -90,12 +89,12 @@ def create_folders():
 
     for folder in folders:
         folder_path = main_folder_path / folder
-        folder_paths[folder] = folder_path # Not sure if this should be stored as Path object or str
+        folder_paths[folder] = folder_path
         if not folder_path.exists():
             folder_path.mkdir()
             print(f"Created folder: {folder_path}")
         else:
-            # Delete ("clear") existing folders and create new ones
+            # Clear existing folders (moved to trash for safety, user should clear trash after use, add disclaimer) and create new ones
             print(f"Folder already exists: {folder_path}")
             send2trash(folder_path)
             folder_path.mkdir()
@@ -115,11 +114,11 @@ def copy_mods(src: pathlib.Path, dir: pathlib.Path, replace):
 def move_mod(file: pathlib.Path, src, dest):
     relative_path = file.relative_to(src.resolve())
     dest_path = dest / relative_path 
-    print(dest_path)
+    
     if file.resolve() == dest_path.resolve():
         print(f"Skipping copy — source and destination are the same: {file}")
         return
-    print("MOVE:", "\n", str(file), "\n", str(src), "\n", str(dest), "\n",str(dest_path))
+    
     if src == folder_paths["backup"]:
         shutil.copy2(str(file), str(dest_path))
     else:
@@ -132,15 +131,8 @@ def update_button_state():
     else:
         csv_upload_button.config(state="disabled")
 
-from pathlib import Path
-
-# Define allowed file extensions for Sims 4
-ALLOWED_4 = (".package", ".ts4script")
-
+# Recursively collect mod files from a directory and sorts them by last modified date.
 def sort_mod_files(mod_path: Path):
-    """
-    Recursively collects mod files from a directory and sorts them by last modified date.
-    """
     # Use pathlib's rglob for recursive search
     mod_files = [f for f in mod_path.rglob("*") if f.suffix.lower() in ALLOWED_4]
 
@@ -169,20 +161,33 @@ def load_csv():
         sorted_mods = sort_mod_files(TEST_PATH) # CHANGE TO SIMS 4 IN PROD
         print(sorted_mods)
         # Perform check, move broken mods to quarantine folder
+        potential_broken = []
+        for index, row in filtered_df.iterrows():
+                for mod in sorted_mods:
+                    not_contained = False
+                    substrings = str(row['Mod Name']).lower().split(" ")
+                    for substring in substrings:
+                        if substring not in str(mod).lower():
+                            not_contained = True
+                            continue
+                    if not not_contained:
+                        potential_broken.append(mod)
+        for mod in potential_broken:
+            move_mod(mod, TEST_PATH, folder_paths["quarantine"])
 
-        # Report broken mods via pop-up (total number, names)
+        # Report potential broken mods via pop-up (total number)
+        messagebox.showinfo(title="CSV Check Complete", message=f"{len(potential_broken)} mod{"" if len(potential_broken) == 1 else "s"} moved to quarantine")
         
     else:
-        messagebox.showinfo("Error", "Invalid file uploaded")
+        messagebox.showinfo(title="Error", message="Invalid file uploaded")
 # ////////////////////////////
 
-# ////////// TO-DO: BUG MODS WONT MOVE INTO MOD FILE ///////////
 def start_fifty_fifty(mod_path):
     mods = sort_mod_files(mod_path)
     print(f"\n Running 50/50 round from: {current_mod_path}")
 
     if len(mods) <= set_iters:
-        print(f"🔍 Quarantine triggered — {len(mods)} mod(s) remaining")
+        print(f"Quarantine triggered — {len(mods)} mod(s) remaining")
         for file in mods:
             move_mod(file, mod_path, folder_paths["quarantine"])
         messagebox.showinfo("Test Complete", "Potential problem mods moved to quarantine. All mods remain in backup folder.")
@@ -206,8 +211,8 @@ def start_fifty_fifty(mod_path):
     for file in inactive_mods:
         move_mod(file, mod_path, folder_paths["inactive"])
 
-    print(f"✅ Moved {len(test_mods)} mods to Mods (Sims will load these)")
-    print(f"📁 Held back {len(inactive_mods)} mods in HoldMods")
+    print(f"Moved {len(test_mods)} mods to Mods")
+    print(f"Held back {len(inactive_mods)} mods in InactiveMods")
 
     result = messagebox.askyesnocancel(message="Please run your game. Did the problem persist?")
 
