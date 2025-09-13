@@ -45,18 +45,8 @@ SIMS_4_MODS_PATH = USER / "Documents" / "Electronic Arts" / "The Sims 4" / "Mods
 
 TEST_PATH = USER / "Desktop" / "Mods"
 
-current_mod_path = TEST_PATH # CHANGE TO SIMS_4_MODS_PATH FOR PROD
+current_mod_path = SIMS_4_MODS_PATH # CHANGE TO SIMS_4_MODS_PATH FOR PROD
 current_allowed = ALLOWED_4
-
-if v == "1":
-    current_mod_path = SIMS_3_MODS_PATH
-    current_allowed = ALLOWED_3
-elif v == "2":
-    current_mod_path = SIMS_4_MODS_PATH
-    current_allowed = ALLOWED_4
-else:
-    current_mod_path = TEST_PATH
-    current_allowed = ALLOWED_3
 
 print("Test path", TEST_PATH)
 
@@ -64,7 +54,6 @@ print("Test path", TEST_PATH)
 
 folder_paths = {
     "backup": "",
-    "keep": "",
     "active": "",
     "inactive": "",
     "quarantine": ""
@@ -73,7 +62,6 @@ folder_paths = {
 def create_folders():
     folders = [
         "backup",
-        "keep",
         "active",
         "inactive",
         "quarantine"
@@ -100,16 +88,18 @@ def create_folders():
             folder_path.mkdir()
             print(f"Folder cleared: {folder_path}")
 
-    # Copy mods to backup
-    copy_mods(current_mod_path , folder_paths["backup"], True)
-
 def clean_folder(folder: pathlib.Path):
     if folder.exists():
         shutil.rmtree(folder)
     folder.mkdir()
 
 def copy_mods(src: pathlib.Path, dir: pathlib.Path, replace):
-    shutil.copytree(src, dir, dirs_exist_ok=replace)
+    if src.exists():
+        shutil.rmtree(dir)
+        shutil.copytree(src, dir, dirs_exist_ok=replace)
+        print(f"Copied mods from {src} to {dir}")
+    else:
+        messagebox.showerror(title="Error", message=f"{src} does not exist. Please install the game or check your Mods folder location.")
 
 def move_mod(file: pathlib.Path, src, dest):
     relative_path = file.relative_to(src.resolve())
@@ -131,10 +121,26 @@ def update_button_state():
     else:
         csv_upload_button.config(state="disabled")
 
+    if v.get() == "1":
+        current_mod_path = SIMS_3_MODS_PATH
+        current_allowed = ALLOWED_3
+        print(current_mod_path)
+        copy_mods(current_mod_path , folder_paths["backup"], True)
+    elif v.get() == "2":
+        current_mod_path = SIMS_4_MODS_PATH
+        current_allowed = ALLOWED_4
+        print(current_mod_path)
+        copy_mods(current_mod_path , folder_paths["backup"], True)
+    else:
+        current_mod_path = TEST_PATH
+        current_allowed = ALLOWED_4
+        print(current_mod_path)
+        copy_mods(current_mod_path , folder_paths["backup"], True)
+
 # Recursively collect mod files from a directory and sorts them by last modified date.
 def sort_mod_files(mod_path: Path):
     # Use pathlib's rglob for recursive search
-    mod_files = [f for f in mod_path.rglob("*") if f.suffix.lower() in ALLOWED_4]
+    mod_files = [f for f in mod_path.rglob("*") if f.suffix.lower() in current_allowed]
 
     # Sort by last modified time (descending: newest first)
     sorted_mods = sorted(mod_files, key=lambda f: f.stat().st_mtime, reverse=True)
@@ -158,8 +164,8 @@ def load_csv():
         print(filtered_df)
 
         # Sort mod folder by date (descending)
-        sorted_mods = sort_mod_files(TEST_PATH) # CHANGE TO SIMS 4 IN PROD
-        print(sorted_mods)
+        sorted_mods = sort_mod_files(current_mod_path)
+
         # Perform check, move broken mods to quarantine folder
         potential_broken = []
         for index, row in filtered_df.iterrows():
@@ -173,7 +179,7 @@ def load_csv():
                     if not not_contained:
                         potential_broken.append(mod)
         for mod in potential_broken:
-            move_mod(mod, TEST_PATH, folder_paths["quarantine"])
+            move_mod(mod, current_mod_path, folder_paths["quarantine"])
 
         # Report potential broken mods via pop-up (total number)
         messagebox.showinfo(title="CSV Check Complete", message=f"{len(potential_broken)} mod{"" if len(potential_broken) == 1 else "s"} moved to quarantine")
@@ -224,22 +230,12 @@ def start_fifty_fifty(mod_path):
         start_fifty_fifty(folder_paths["active"])
     elif result is None:
         messagebox.showinfo("Quit", message="Testing quit")
-        return
-
-    """
-    if remaining_mods <= set_iters:
-        for file in test_mods:
-            move_mod(file, mod_path, folder_paths["quarantine"])
-
-        # Move files to HoldMods (not being tested now)
-        for file in inactive_mods:
-            move_mod(file, mod_path, folder_paths["quarantine"])
-        
-        messagebox.showinfo("Potential problem mods have been moved to the qurantine file")
-   """     
+        return  
 
 # Initialize folders
 create_folders()
+
+
 
 # *** ///////// GUI ///////// ***
 
