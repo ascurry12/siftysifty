@@ -19,7 +19,3 @@ SiftySifty is a desktop application for testing/troubleshooting mods in The Sims
 * Implement user file threshold input field
 * Improve GUI
 * Real game file testing
-
-**mu**
-
-## License
