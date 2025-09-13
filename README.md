@@ -13,7 +13,9 @@ SiftySifty is a desktop application for testing/troubleshooting mods in The Sims
     + If any issues persist, click "Yes"; if they do not, click "No."
     + Continue following these instructions until potential problem mods are moved to the **quarantine** directory found in **siftysiftydir**
     + The test may be canceled at any time by clicking "Cancel."
-
+* All original mod files can be found in the backup folder. Remember to copy these files back into your original mods folder before closing the application.
+* Run this test as many times as needed.
+  
 ## To Do
 
 * Implement user file threshold input field
